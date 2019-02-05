@@ -1,74 +1,63 @@
-import React, { Component } from 'react';
-import { Link } from 'react-router-dom';
-// import './App.css';
-import firebase from './Firebase';
+import React, { Component } from "react";
+import { BrowserRouter as Router, Route } from "react-router-dom";
+
+import PrivateRoute from "./PrivateRoute";
+import firebase from "./Firebase";
+
+import Edit from './components/Edit';
+import Create from './components/Create';
+import Show from './components/Show';
+
+import Home from "./components/Home";
+import LogIn from "./components/Login";
+import SignUp from "./components/SignUp";
 
 class App extends Component {
-  constructor(props) {
-    super(props);
-    this.ref = firebase.firestore().collection('boards');
-    this.unsubscribe = null;
-    this.state = {
-      boards: []
-    };
-  }
+  state = { loading: true, authenticated: false, user: null };
 
-  onCollectionUpdate = (querySnapshot) => {
-    const boards = [];
-    querySnapshot.forEach((doc) => {
-      const { title, description, author } = doc.data();
-      boards.push({
-        key: doc.id,
-        doc, // DocumentSnapshot
-        title,
-        description,
-        author,
-      });
+  componentWillMount() {
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        this.setState({
+          authenticated: true,
+          currentUser: user,
+          loading: false
+        });
+      } else {
+        this.setState({
+          authenticated: false,
+          currentUser: null,
+          loading: false
+        });
+      }
     });
-    this.setState({
-      boards
-   });
-  }
-
-  componentDidMount() {
-    this.unsubscribe = this.ref.onSnapshot(this.onCollectionUpdate);
   }
 
   render() {
+    const { authenticated, loading } = this.state;
+
+    if (loading) {
+      return <p>Loading..</p>;
+    }
+
     return (
-      <div class="container">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h3 class="panel-title">
-              BOARD LIST
-            </h3>
-          </div>
-          <div class="panel-body">
-            <h4><Link to="/create">Add Board</Link></h4>
-            <table class="table table-stripe">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Description</th>
-                  <th>Author</th>
-                </tr>
-              </thead>
-              <tbody>
-                {this.state.boards.map(board =>
-                  <tr>
-                    <td><Link to={`/show/${board.key}`}>{board.title}</Link></td>
-                    <td>{board.description}</td>
-                    <td>{board.author}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+      <Router>
+        <div>
+          <PrivateRoute
+            exact
+            path="/"
+            component={Home}
+            authenticated={authenticated}
+          />
+          <Route path='/edit/:id' component={Edit} />
+          <Route path='/create' component={Create} />
+          <Route path='/show/:id' component={Show} />
+          <Route exact path="/login" component={LogIn} />
+          <Route exact path="/signup" component={SignUp} />
         </div>
-      </div>
+      </Router>
     );
   }
 }
 
 export default App;
-
